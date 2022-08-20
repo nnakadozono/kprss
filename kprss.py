@@ -1,8 +1,7 @@
 import os, sys
-import shutil
-import re
 import datetime
 import time
+import pickle
 
 import requests
 from bs4 import BeautifulSoup
@@ -40,6 +39,14 @@ def connect_db(sqlite3db):
                  (key text PRIMARY KEY, fkey text REFERENCES {kp} (key), type text, i integer, url text, text text, filename text, url_dbx text)''')
     return conn
 
+def load_cookies(session):
+    with open('cookies.pkl', 'rb') as f:
+        session.cookies = pickle.load(f)
+
+def save_cookies(session):
+    with open('cookies.pkl', 'wb') as f:
+        pickle.dump(session.cookies, f)
+
 def login():
     # Access
     s = requests.Session()
@@ -57,11 +64,15 @@ def login():
     r = s.post(rooturl+'/login/', data=payload)
 
     time.sleep(5)
-    # if r.text.startswith("このユーザーIDは"):
-    #     print("The number of login users exceeds its limitation. Try it again later.")
-    #     sys.exit()
+    soup = BeautifulSoup(r.text, features="lxml")
+    error = soup.find(class_='error_text')
+    if (error is not None) and error.get_text().startswith('このアカウントは現在ご利用中です'):
+        print("The number of login users exceeds its limitation. Try it again later.")
+        sys.exit()
+    else:
+        save_cookies(s)
 
-    return s
+    return s, r
 
 def get_todays_linklist(s):
     # Get and store contents ==========================    
@@ -154,14 +165,14 @@ class Article():
         r = session.get(self.link)
         self.soup = BeautifulSoup(r.text, features="lxml")
 
-        self.category = self.soup.find(class_='border_title').get_text(strip=True)
+        self.category = self.soup.find(id='bread').find_all('li')[-1].get_text()
         self.title = self.soup.find(class_="article_title").get_text()
         if self.soup.find(class_="article_detail_text") is not None:
             self.article = self.soup.find(class_="article_detail_text").get_text().replace("\u3000", "")
         else:
             self.article = ""
-        _date = self.soup.find(class_='date').get_text()
-        self.date = datetime.datetime.strptime(_date, '%Y年%m月%d日').date()
+        _date = self.soup.find(class_='date').get_text().split('日')[0]
+        self.date = datetime.datetime.strptime(_date, '%Y年%m月%d').date()
 
         _photo = self.soup.find_all(class_='photo_set')
         if _photo is not None:
@@ -256,7 +267,7 @@ def main():
     dbx = dropbox.Dropbox(DBX_ACCESS_TOKEN)
 
     # Access Web and get articles  ====================
-    s = login()
+    s, r = login()
     articles = get_todays_linklist(s)
     #articles = articles[:3] ############################
     articles = get_articles(s, articles)
