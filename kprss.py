@@ -83,9 +83,10 @@ def get_todays_linklist(s):
 
         articles = []
         # Pickup
-        link = rooturl + soup.find(id='home_pickup').a.get('href')
-        #print(link)
-        articles.append(Article(link, category=''))
+        for pickup in soup.find_all(id='home_pickup'):
+            link = rooturl + pickup.a.get('href')
+            #print(link)
+            articles.append(Article(link, category=''))
         # Usual
         for articles_list in soup.find_all(class_='articles_list'):
             for li in articles_list.find_all('li'):
