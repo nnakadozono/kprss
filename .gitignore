@@ -3,6 +3,9 @@
 *db
 *jpg
 *pyc
+*zip
 myenv.sh
 deploy.sh
 run.sh
+cookies.pkl
+.env
