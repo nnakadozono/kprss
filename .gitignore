@@ -5,7 +5,9 @@
 *pyc
 *zip
 myenv.sh
+myenv_minimum.sh
 deploy.sh
 run.sh
 cookies.pkl
 .env
+build/
