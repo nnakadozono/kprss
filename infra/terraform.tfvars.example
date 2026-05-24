@@ -1,0 +1,15 @@
+lambda_exec_role_name = "example-lambda-role"
+lambda_exec_role_path = "/service-role/"
+
+kprss_policy_name = "ExampleKprssRequiredAccess"
+
+scheduler_exec_role_name = "example-scheduler-role"
+scheduler_exec_role_path = "/service-role/"
+scheduler_policy_name    = "example-scheduler-invoke-lambda-policy"
+scheduler_policy_path    = "/service-role/"
+
+kp_s3_bucket = "example-kprss-bucket"
+
+scheduler_schedule_name       = "example-kprss-every-day"
+scheduler_schedule_group_name = "default"
+scheduler_schedule_expression = "cron(37 5 * * ? *)"
