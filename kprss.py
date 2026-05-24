@@ -363,8 +363,7 @@ def main(workdir):
     # Just be sure any changes have been committed or they will be lost.
     conn.close()
 
-    # return articles
-    return None
+    return articles
 
 
 def upload_to_dbx(dbx, name, workdir, overwrite=True):
