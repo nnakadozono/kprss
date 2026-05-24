@@ -8,6 +8,7 @@ data "aws_region" "current" {}
 
 locals {
   ssm_parameter_prefix = trimprefix(var.ssm_prefix, "/")
+  reader_site_prefix   = trim(var.reader_site_prefix, "/")
 }
 
 # S3 bucket for application data and function.zip.
@@ -202,4 +203,207 @@ resource "aws_scheduler_schedule" "kprss_every_day" {
   lifecycle {
     prevent_destroy = true
   }
+}
+
+resource "aws_cloudfront_origin_access_control" "reader" {
+  name                              = var.reader_cloudfront_oac_name
+  description                       = "OAC for kprss reader S3 origin"
+  origin_access_control_origin_type = "s3"
+  signing_behavior                  = "always"
+  signing_protocol                  = "sigv4"
+}
+
+resource "aws_cloudfront_function" "reader_basic_auth" {
+  name    = var.reader_basic_auth_function_name
+  runtime = "cloudfront-js-2.0"
+  comment = "Basic Auth for kprss reader"
+  publish = true
+  code = templatefile("${path.module}/reader_basic_auth.js.tftpl", {
+    basic_auth_header = "Basic ${base64encode("${var.reader_basic_auth_username}:${var.reader_basic_auth_password}")}"
+  })
+}
+
+resource "aws_cloudfront_cache_policy" "reader_short" {
+  name        = var.reader_short_cache_policy_name
+  comment     = "Short TTL cache policy for kprss reader HTML and fresh data"
+  default_ttl = 60
+  max_ttl     = 300
+  min_ttl     = 0
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "none"
+    }
+
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+
+    enable_accept_encoding_brotli = true
+    enable_accept_encoding_gzip   = true
+  }
+}
+
+resource "aws_cloudfront_cache_policy" "reader_long" {
+  name        = var.reader_long_cache_policy_name
+  comment     = "Long TTL cache policy for immutable kprss reader assets"
+  default_ttl = 31536000
+  max_ttl     = 31536000
+  min_ttl     = 86400
+
+  parameters_in_cache_key_and_forwarded_to_origin {
+    cookies_config {
+      cookie_behavior = "none"
+    }
+
+    headers_config {
+      header_behavior = "none"
+    }
+
+    query_strings_config {
+      query_string_behavior = "none"
+    }
+
+    enable_accept_encoding_brotli = true
+    enable_accept_encoding_gzip   = true
+  }
+}
+
+resource "aws_cloudfront_distribution" "reader" {
+  enabled             = true
+  comment             = "kprss reader"
+  default_root_object = "index.html"
+  price_class         = var.reader_cloudfront_price_class
+
+  origin {
+    domain_name              = aws_s3_bucket.kp_data.bucket_regional_domain_name
+    origin_id                = "kprss-reader-s3"
+    origin_access_control_id = aws_cloudfront_origin_access_control.reader.id
+    origin_path              = "/${local.reader_site_prefix}"
+  }
+
+  default_cache_behavior {
+    target_origin_id       = "kprss-reader-s3"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.reader_short.id
+    compress               = true
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.reader_basic_auth.arn
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "assets/*"
+    target_origin_id       = "kprss-reader-s3"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.reader_long.id
+    compress               = true
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.reader_basic_auth.arn
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "data/manifest.json"
+    target_origin_id       = "kprss-reader-s3"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.reader_short.id
+    compress               = true
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.reader_basic_auth.arn
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "data/latest.json"
+    target_origin_id       = "kprss-reader-s3"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.reader_short.id
+    compress               = true
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.reader_basic_auth.arn
+    }
+  }
+
+  ordered_cache_behavior {
+    path_pattern           = "data/*.json"
+    target_origin_id       = "kprss-reader-s3"
+    viewer_protocol_policy = "redirect-to-https"
+    allowed_methods        = ["GET", "HEAD"]
+    cached_methods         = ["GET", "HEAD"]
+    cache_policy_id        = aws_cloudfront_cache_policy.reader_long.id
+    compress               = true
+
+    function_association {
+      event_type   = "viewer-request"
+      function_arn = aws_cloudfront_function.reader_basic_auth.arn
+    }
+  }
+
+  restrictions {
+    geo_restriction {
+      restriction_type = "none"
+    }
+  }
+
+  viewer_certificate {
+    cloudfront_default_certificate = true
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
+data "aws_iam_policy_document" "reader_bucket_policy" {
+  statement {
+    sid    = "AllowCloudFrontReadReaderSite"
+    effect = "Allow"
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudfront.amazonaws.com"]
+    }
+
+    actions = [
+      "s3:GetObject",
+    ]
+
+    resources = [
+      "${aws_s3_bucket.kp_data.arn}/${local.reader_site_prefix}/*",
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "AWS:SourceArn"
+      values = [
+        aws_cloudfront_distribution.reader.arn,
+      ]
+    }
+  }
+}
+
+resource "aws_s3_bucket_policy" "reader_cloudfront" {
+  bucket = aws_s3_bucket.kp_data.id
+  policy = data.aws_iam_policy_document.reader_bucket_policy.json
 }

@@ -1,5 +1,7 @@
 .DS_Store
 .env
+*.tfvars
+*.tfvars.json
 __pycache__/
 .pycache/
 *.pyc

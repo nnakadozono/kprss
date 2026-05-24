@@ -79,3 +79,51 @@ variable "scheduler_schedule_timezone" {
   default     = "Asia/Tokyo"
   description = "Existing EventBridge Scheduler timezone."
 }
+
+variable "reader_site_prefix" {
+  type        = string
+  default     = "reader/site"
+  description = "S3 prefix that stores the generated reader site."
+}
+
+variable "reader_basic_auth_username" {
+  type        = string
+  sensitive   = true
+  description = "Basic Auth username for the reader CloudFront Function."
+}
+
+variable "reader_basic_auth_password" {
+  type        = string
+  sensitive   = true
+  description = "Basic Auth password for the reader CloudFront Function."
+}
+
+variable "reader_cloudfront_oac_name" {
+  type        = string
+  default     = "kprss-reader-oac"
+  description = "CloudFront Origin Access Control name for the reader."
+}
+
+variable "reader_basic_auth_function_name" {
+  type        = string
+  default     = "kprss-reader-basic-auth"
+  description = "CloudFront Function name for reader Basic Auth."
+}
+
+variable "reader_short_cache_policy_name" {
+  type        = string
+  default     = "kprss-reader-short"
+  description = "CloudFront cache policy name for short-lived reader objects."
+}
+
+variable "reader_long_cache_policy_name" {
+  type        = string
+  default     = "kprss-reader-long"
+  description = "CloudFront cache policy name for long-lived reader objects."
+}
+
+variable "reader_cloudfront_price_class" {
+  type        = string
+  default     = "PriceClass_100"
+  description = "CloudFront price class for the reader distribution."
+}

@@ -13,3 +13,7 @@ kp_s3_bucket = "example-kprss-bucket"
 scheduler_schedule_name       = "example-kprss-every-day"
 scheduler_schedule_group_name = "default"
 scheduler_schedule_expression = "cron(37 5 * * ? *)"
+
+reader_site_prefix       = "reader/site"
+reader_basic_auth_username = "example-user"
+reader_basic_auth_password = "example-password"

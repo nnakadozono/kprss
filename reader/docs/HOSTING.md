@@ -31,7 +31,7 @@ The hosting infrastructure should live in the `kprss` repository Terraform,
 because that repository already owns the bucket, Lambda, IAM, and Terraform
 state.
 
-Add these resources there:
+The Terraform in `infra/` owns these resources:
 
 - CloudFront distribution with the existing S3 bucket as origin
 - Origin Access Control for private S3 reads
@@ -41,6 +41,33 @@ Add these resources there:
   - short TTL for `/`, `/index.html`, `/data/manifest.json`, `/data/latest.json`
   - long TTL for `/assets/*` and `/data/YYYY-MM-DD.json`
 
+## Terraform apply
+
+Set the Basic Auth credentials in ignored `infra/terraform.tfvars`:
+
+```hcl
+reader_basic_auth_username = "YOUR_USERNAME"
+reader_basic_auth_password = "YOUR_PASSWORD"
+```
+
+This value is sensitive and should stay in ignored local files and local
+Terraform state. Do not commit `terraform.tfvars` or `terraform.tfstate`.
+
+From `infra/`:
+
+```sh
+terraform validate
+terraform plan
+terraform apply
+```
+
+After apply, copy the distribution id into `reader/.env`:
+
+```sh
+terraform output reader_cloudfront_distribution_id
+terraform output reader_cloudfront_domain_name
+```
+
 ## Manual deploy
 
 Configure `.env`:
@@ -49,6 +76,7 @@ Configure `.env`:
 KPRSS_READER_SITE_BUCKET=YOUR_KPRSS_BUCKET
 KPRSS_READER_SITE_PREFIX=reader/site
 KPRSS_READER_CLOUDFRONT_DISTRIBUTION_ID=YOUR_DISTRIBUTION_ID
+KPRSS_READER_CLOUDFRONT_DOMAIN_NAME=YOUR_DISTRIBUTION.cloudfront.net
 ```
 
 Deploy everything from the local database:

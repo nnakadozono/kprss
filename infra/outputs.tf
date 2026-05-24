@@ -17,3 +17,15 @@ output "iam_role_arn" {
 output "scheduler_schedule_arn" {
   value = aws_scheduler_schedule.kprss_every_day.arn
 }
+
+output "reader_cloudfront_distribution_id" {
+  value = aws_cloudfront_distribution.reader.id
+}
+
+output "reader_cloudfront_domain_name" {
+  value = aws_cloudfront_distribution.reader.domain_name
+}
+
+output "reader_site_s3_uri" {
+  value = "s3://${aws_s3_bucket.kp_data.bucket}/${local.reader_site_prefix}"
+}
