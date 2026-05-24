@@ -60,6 +60,7 @@ If `KP_DBX_ACCESS_TOKEN` is set the script will upload images and the generated 
 
 ## Files of interest
 - `kprss.py` — main script (login, scrape, DB, RSS, Dropbox helpers)
+- `reader/` — static web reader and JSON generator for collected articles
 - `run.sh`, `run_template.sh` — runners
 - `myenv_template.sh`, `myenv.sh` — environment config
 - `.gitignore` — ignored files (db, images, cookies, etc.)
