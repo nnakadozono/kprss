@@ -20,3 +20,7 @@ export KPRSS=yourrssname
 
 # AWS S3 Bucket Name
 export KP_S3_BUCKET=your-s3-bucket-name
+
+# Reader JSON generation
+export KPRSS_READER_DAYS=10
+export KPRSS_READER_SITE_PREFIX=reader/site

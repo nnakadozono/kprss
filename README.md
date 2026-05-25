@@ -25,6 +25,8 @@ Set values in `myenv.sh`:
 - KP_DBX_ACCESS_TOKEN — Dropbox access token (optional)
 - KPRSS — output RSS filename
 - KP_S3_BUCKET - AWS S3 Bucket Name
+- KPRSS_READER_DAYS - number of latest article dates to refresh for the static reader
+- KPRSS_READER_SITE_PREFIX - S3 prefix for the static reader site, usually `reader/site`
 
 Do not commit `myenv.sh` (it's in .gitignore).
 
@@ -76,9 +78,13 @@ Small AWS-based pipeline that runs a Python Lambda (kprss.py) on a schedule to p
 - Lambda assumes an **IAM role** with permissions to access S3, Parameter Store, and CloudWatch Logs.
 - **EventBridge** rule triggers the Lambda on a daily schedule.
 - **CloudWatch** collects and stores Lambda execution logs for observability and troubleshooting.
+- Optional reader settings can be stored under the same SSM prefix:
+  - `KPRSS_READER_DAYS` controls how many recent article dates are refreshed.
+  - `KPRSS_READER_SITE_PREFIX` controls the S3 site prefix, usually `reader/site`.
 
 ### Deployment / operational notes
 - The `build_lambda.sh` builds and packages the Lambda as function.zip and upload it (alongside the database zip) to the configured S3 bucket.
+- After updating the database, the Lambda generates reader JSON for the latest `KPRSS_READER_DAYS` dates and uploads only missing daily files plus fresh `latest.json` and `manifest.json`. Existing older daily JSON files are left in S3.
 
 
 ## License

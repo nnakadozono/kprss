@@ -108,7 +108,6 @@ fi
 if [[ "$MODE" == "full" || "$MODE" == "data-only" ]]; then
   echo "Deploying data files to ${S3_URI}/data/..."
   aws s3 sync "${OUT_DIR}/data/" "${S3_URI}/data/" \
-    --delete \
     --cache-control "public,max-age=31536000,immutable" \
     --exclude "*" \
     --include "????-??-??.json"

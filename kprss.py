@@ -14,6 +14,9 @@ from pytz import timezone
 
 import boto3
 import zipfile
+import re
+
+from reader.generator import generate_reader_payloads_from_db, json_bytes
 
 
 def _load_ssm_parameters(names, prefix=None):
@@ -38,7 +41,8 @@ def _load_ssm_parameters(names, prefix=None):
 SSM_PREFIX = os.environ.get('KP_SSM_PREFIX') 
 
 _param_names = ['KPLONG','KPSHORT','KPUSR','KPPSW','KPDB',
-                'KP_DBX_ACCESS_TOKEN','KPRSS','KP_S3_BUCKET']
+                'KP_DBX_ACCESS_TOKEN','KPRSS','KP_S3_BUCKET',
+                'KPRSS_READER_DAYS','KPRSS_READER_SITE_PREFIX']
 
 try:
     _params = _load_ssm_parameters(_param_names, prefix=SSM_PREFIX)
@@ -49,6 +53,16 @@ except Exception as e:
 
 def _cfg(name):
     return _params.get(name) or os.environ.get(name)
+
+def _cfg_int(name, default):
+    value = _cfg(name)
+    if value in (None, ''):
+        return default
+    try:
+        return int(value)
+    except ValueError:
+        print(f"Warning: invalid integer for {name}: {value!r}; using {default}")
+        return default
 
 KPLONG = _cfg('KPLONG')  # Name used in RSS title and description
 KP = _cfg('KPSHORT')     # URL, media short name and DB table name
@@ -65,6 +79,8 @@ RSS_FILE_NAME = _cfg('KPRSS')
 # COOKIE_FILE = os.environ.get('COOKIE_FILE', '/tmp/cookies.pkl')
 S3_BUCKET = _cfg('KP_S3_BUCKET')
 S3_DB_KEY = f"{DB_FILE}.zip"
+READER_DAYS = _cfg_int('KPRSS_READER_DAYS', 10)
+READER_SITE_PREFIX = (_cfg('KPRSS_READER_SITE_PREFIX') or 'reader/site').strip('/')
 
 
 def s3_download_db(local_path):
@@ -91,6 +107,83 @@ def s3_upload_db(local_path):
     except Exception as e:
         print(f"S3 upload failed")
         raise
+
+
+def _list_existing_reader_dates(s3, bucket, data_prefix):
+    paginator = s3.get_paginator('list_objects_v2')
+    dates = set()
+    pattern = re.compile(r'(\d{4}-\d{2}-\d{2})\.json$')
+    for page in paginator.paginate(Bucket=bucket, Prefix=data_prefix):
+        for item in page.get('Contents', []):
+            filename = item['Key'].rsplit('/', 1)[-1]
+            match = pattern.fullmatch(filename)
+            if match:
+                dates.add(match.group(1))
+    return dates
+
+
+def _put_reader_json(s3, bucket, key, payload, cache_control):
+    s3.put_object(
+        Bucket=bucket,
+        Key=key,
+        Body=json_bytes(payload),
+        ContentType='application/json; charset=utf-8',
+        CacheControl=cache_control,
+    )
+
+
+def upload_reader_data(local_db_path):
+    if not S3_BUCKET:
+        print("S3_BUCKET is not set; skipping reader data upload.")
+        return
+
+    s3 = boto3.client('s3')
+    data_prefix = f"{READER_SITE_PREFIX}/data/"
+    existing_dates = _list_existing_reader_dates(s3, S3_BUCKET, data_prefix)
+    dates, daily_payloads = generate_reader_payloads_from_db(
+        local_db_path,
+        article_table=KP,
+        asset_table='photo_chart',
+        days=READER_DAYS,
+    )
+
+    latest_date = dates[0]
+    uploaded_dates = []
+    for date, payload in daily_payloads.items():
+        if date in existing_dates and date != latest_date:
+            continue
+        _put_reader_json(
+            s3,
+            S3_BUCKET,
+            f"{data_prefix}{date}.json",
+            payload,
+            'public,max-age=31536000,immutable',
+        )
+        uploaded_dates.append(date)
+
+    manifest_dates = sorted(existing_dates.union(daily_payloads.keys()), reverse=True)
+    _put_reader_json(
+        s3,
+        S3_BUCKET,
+        f"{data_prefix}latest.json",
+        daily_payloads[latest_date],
+        'no-cache',
+    )
+    _put_reader_json(
+        s3,
+        S3_BUCKET,
+        f"{data_prefix}manifest.json",
+        {
+            "latestDate": latest_date,
+            "dates": manifest_dates,
+        },
+        'no-cache',
+    )
+
+    print(
+        f"Uploaded reader data: {len(uploaded_dates)} daily files, "
+        f"latest.json, manifest.json to s3://{S3_BUCKET}/{data_prefix}"
+    )
 
 
 def connect_db(db_file_path):
@@ -416,6 +509,7 @@ def lambda_handler(event, context):
     with zipfile.ZipFile(local_db_zip_path, 'w', compression=zipfile.ZIP_DEFLATED) as z:
         z.write(local_db_path, arcname=DB_FILE)
     s3_upload_db(local_db_zip_path)
+    upload_reader_data(local_db_path)
 
     return {
         'statusCode': 200,

@@ -97,15 +97,33 @@ Generate and deploy only `data/`:
 scripts/deploy_site.sh --data-only
 ```
 
+Daily `YYYY-MM-DD.json` files are uploaded without deleting older files already
+in S3. `latest.json` and `manifest.json` are overwritten.
+
 Use `--app-only` when the local database may be stale and you only want to
 publish HTML/CSS/JS changes.
 
-## JSON generation direction
+## Lambda JSON generation
 
-Prefer generating reader JSON in the existing `kprss` fetch/write Lambda after
-the SQLite database has been updated. That avoids downloading the SQLite file
-again in a second Lambda and keeps the DB update and reader JSON update in one
-workflow.
+The existing `kprss` fetch/write Lambda generates reader JSON after the SQLite
+database has been updated and uploaded.
 
-A separate generator Lambda remains possible later if the reader generation
-needs independent retries, deployment, or ownership.
+The Lambda refreshes the latest `KPRSS_READER_DAYS` dates. Existing daily JSON
+files are preserved; only missing daily files and the latest date file are
+uploaded. `latest.json` and `manifest.json` are overwritten on every run.
+
+`manifest.json` is built from the S3 list of existing daily JSON files plus the
+newly generated dates, so older dates remain visible after they fall outside the
+latest refresh window.
+
+For Lambda, set these as SSM parameters under `KP_SSM_PREFIX` if you need values
+other than the defaults:
+
+```text
+KPRSS_READER_DAYS=10
+KPRSS_READER_SITE_PREFIX=reader/site
+```
+
+The Lambda role also needs `s3:ListBucket` on the reader data prefix so it can
+build `manifest.json` from the existing S3 daily JSON files. This is managed by
+the Terraform IAM policy in `infra/`.

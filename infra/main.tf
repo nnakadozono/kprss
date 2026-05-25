@@ -64,6 +64,21 @@ resource "aws_iam_policy" "kprss_policy" {
         Resource = "${aws_s3_bucket.kp_data.arn}/*"
       },
       {
+        Sid    = "AllowListReaderData"
+        Effect = "Allow"
+        Action = [
+          "s3:ListBucket",
+        ]
+        Resource = aws_s3_bucket.kp_data.arn
+        Condition = {
+          StringLike = {
+            "s3:prefix" = [
+              "${local.reader_site_prefix}/data/*",
+            ]
+          }
+        }
+      },
+      {
         Sid    = "AllowReadSSMParameters"
         Effect = "Allow"
         Action = [

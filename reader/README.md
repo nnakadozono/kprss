@@ -29,6 +29,9 @@ By default this writes only the latest 10 article dates. Override it with:
 python3 scripts/generate_site.py --out dist --days 20
 ```
 
+In Lambda, `KPRSS_READER_DAYS` controls how many recent dates are refreshed.
+Older daily JSON files already in S3 are preserved.
+
 Serve the generated files locally:
 
 ```sh

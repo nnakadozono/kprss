@@ -23,6 +23,8 @@ docker run --rm \
     rm -rf build && mkdir build
     pip install -r requirements.txt -t build
     cp $LAMBDA_FILE build/
+    mkdir -p build/reader
+    cp reader/__init__.py reader/generator.py build/reader/
     cd build
     zip -r ../$OUTPUT_ZIP .
   "
