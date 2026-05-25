@@ -30,7 +30,7 @@ scripts/deploy_site.sh
   `data/manifest.json`.
 - The generator defaults to the latest 10 article dates. Use `--days` for a
   different window.
-- Reading mode is selection-based: articles are checked by default, checked
+- Reading mode is selection-based: articles are unchecked by default, checked
   articles remain visible and expand;
   toggling reading mode off returns to all articles collapsed.
 - Copy buttons copy Markdown for the current article or all currently visible

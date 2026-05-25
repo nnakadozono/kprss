@@ -113,11 +113,11 @@
     if (!dayState.articles[article.id]) {
       dayState.articles[article.id] = {
         expanded: false,
-        selected: true,
+        selected: false,
       };
     }
     if (dayState.articles[article.id].selected === undefined) {
-      dayState.articles[article.id].selected = true;
+      dayState.articles[article.id].selected = false;
     }
     return dayState.articles[article.id];
   }

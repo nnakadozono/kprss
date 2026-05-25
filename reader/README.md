@@ -102,8 +102,8 @@ This app intentionally has no backend state. State persists across reloads and
 normal date navigation on the same browser, but it is not a cross-device source
 of truth.
 
-The main reading flow uses selected articles. Articles are selected by default.
-Uncheck articles you do not want to read, press `読む`, and only selected
+The main reading flow uses selected articles. Articles are not selected by
+default. Check articles you want to read, press `読む`, and only selected
 articles stay visible and expand. Press it again to return to the full collapsed
 headline list.
 
