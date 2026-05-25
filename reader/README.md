@@ -112,8 +112,8 @@ visible articles. The app uses the Clipboard API when available and falls back
 to a temporary text selection copy method for local iPhone/Safari testing over
 plain HTTP.
 
-Copied Markdown renders article URLs as links using the article ID as the label,
-for example `- URL: [197930](https://...)`.
+Copied Markdown renders the article date, category, and linked article ID on
+one line, for example `2025-12-12 / ログブック / [197930](https://...)`.
 
 ## iPhone local testing
 

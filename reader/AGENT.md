@@ -35,8 +35,8 @@ scripts/deploy_site.sh
   toggling reading mode off returns to all articles collapsed.
 - Copy buttons copy Markdown for the current article or all currently visible
   articles. Keep the Clipboard API fallback for iPhone/Safari HTTP testing.
-- Copied article URLs should be Markdown links whose label is the trailing URL
-  ID, such as `[197930](https://...)`.
+- Copied Markdown should put date, category, and the linked trailing URL ID on
+  one line, such as `2025-12-12 / ログブック / [197930](https://...)`.
 - Article footer actions are copy, collapse, and unselect. There is no
   read/unread or star feature in v1.
 - Article images come from the configured or inferred asset table, usually as

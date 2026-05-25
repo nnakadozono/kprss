@@ -44,7 +44,7 @@
     els.todayDay.addEventListener("click", () => navigateToDate(manifest.latestDate));
     els.datePicker.addEventListener("change", () => navigateToDateInput());
     els.datePicker.addEventListener("blur", () => {
-      els.datePicker.value = formatDisplayDate(currentDate);
+      els.datePicker.value = currentDate;
     });
     els.datePicker.addEventListener("keydown", (event) => {
       if (event.key === "Enter") {
@@ -330,13 +330,16 @@
       const caption = image.caption || article.title;
       return `![${caption}](${image.url})`;
     }).join("\n\n");
+    const meta = [
+      article.date,
+      article.category || "",
+      `[${articleUrlId(article.url)}](${article.url})`,
+    ].join(" / ");
 
     const lines = [
       `## ${article.title}`,
       "",
-      `- Date: ${article.date}`,
-      ...(article.category ? [`- Category: ${article.category}`] : []),
-      `- URL: [${articleUrlId(article.url)}](${article.url})`,
+      meta,
       "",
       article.article || "",
       ...(imageMarkdown ? ["", imageMarkdown] : []),
@@ -356,7 +359,7 @@
   }
 
   async function copyMarkdown(articles) {
-    const text = articles.map(articleToMarkdown).join("\n\n---\n\n");
+    const text = articles.map(articleToMarkdown).join("\n\n");
     const copied = await copyText(text);
     els.copyStatus.textContent = copied
       ? `${articles.length}件をコピーしました`
